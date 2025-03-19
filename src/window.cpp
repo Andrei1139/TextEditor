@@ -12,31 +12,37 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
         case WM_PAINT: {
             PAINTSTRUCT ps;
-            // HDC hdc = BeginPaint(hwnd, &ps);
+            HDC hdc = BeginPaint(hwnd, &ps);
 
             // All painting occurs here, between BeginPaint and EndPaint.
 
-            // FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_GRADIENTACTIVECAPTION + 1));
-
-            // EndPaint(hwnd, &ps);
             
-            HDC device_context = GetDC(hwnd);
-            // SetBkColor(device_context, RGB(0, 0, 0));
+            
+            // HDC device_context = GetDC(hwnd);
+            // SetBkColor(device_context, RGB(255, 255, 255));
             tagRECT rect;
-            GetWindowRect(hwnd, &rect);
+            GetClientRect(hwnd, &rect);
+            // std::cout << rect.left << ' ' << rect.bottom << ' ' << rect.right << ' ' << rect.top << '\n';
+            FillRect(hdc, &ps.rcPaint, CreateSolidBrush(RGB(255, 255, 255)));
 
-            rect.bottom -= rect.top;
-            rect.right -= rect.left;
-            rect.top = rect.left = 0;
-
-            DrawText(device_context, text.c_str(), text.size(), &rect, DT_LEFT);
-
-            std::cout << rect.top << ' ' << rect.left << ' ' << rect.bottom << ' ' << rect.right << '\n';
+            SetTextColor(hdc, RGB(0, 0, 0));
+            SetBkColor(hdc, RGB(255, 255, 255));
+            
+            DrawText(hdc, text.c_str(), text.size(), &rect, DT_LEFT);
+            // DrawText(hdc, text.c_str(), text.size(), &rect, DT_LEFT);
+            EndPaint(hwnd, &ps);
+            // ReleaseDC(hwnd, device_context);
             
             return 0;
         }
-        case WM_KEYDOWN: {
-            text.append(L"t");
+        case WM_CHAR: {
+            if (wParam == L'\b') {
+                if (text.size() > 0)
+                    text.pop_back();    
+            } else {
+                text += wParam;
+            }
+            RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
             return 0;
         }
     }

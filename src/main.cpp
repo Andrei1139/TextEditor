@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
         Window window(L"Nameee");
         window.loop();
     } catch (const std::exception& exception) {
-        std::cerr << exception.what();
+        std::cerr << "Exception: " << exception.what();
     }
     return 0;
 }

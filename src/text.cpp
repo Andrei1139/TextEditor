@@ -14,7 +14,8 @@ Text::Text(wchar_t* initText) {
     auto token = wcstok(initText, separators);
 
     while (token) {
-        text.push_back(std::wstring(token));
+        // TODO
+        // text.push_back(std::wstring(token));
         token = wcstok(NULL, separators);
     }
 }

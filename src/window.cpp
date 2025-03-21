@@ -1,10 +1,12 @@
 #include <stdexcept>
+#include <stdint.h>
 #include "window.h"
 
-static std::wstring text{};
+static constexpr uint8_t textColor = 0;
+static constexpr uint8_t bkColor = 255;
 
-static constexpr COLORREF textColor = RGB(255, 255, 255);
-static constexpr COLORREF bkColor = RGB(0, 0, 0);
+static constexpr COLORREF textRGB = RGB(textColor, textColor, textColor);
+static constexpr COLORREF bkRGB = RGB(bkColor, bkColor, bkColor);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // For class access, since the function doesnt allow additionals args
@@ -18,22 +20,61 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
             tagRECT rect, cursorRect = *(textHandler->getCursor());
-
             GetClientRect(hwnd, &rect);
-            // Clear the window (by repainting it white)
-            FillRect(hdc, &ps.rcPaint, CreateSolidBrush(bkColor));
 
-            SelectObject(hdc, textHandler->getFont());
-            SetTextColor(hdc, textColor);
-            SetBkColor(hdc, bkColor);
+            // Creating a temporary bitmap and device context for buffering what gets drawn
+            HBITMAP tempBuffer = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+            HDC tempHDC = CreateCompatibleDC(hdc);
+            SelectObject(tempHDC, tempBuffer);
+
+            // Clear the window (by repainting it white)
+            FillRect(tempHDC, &ps.rcPaint, CreateSolidBrush(bkRGB));
+
+            SelectObject(tempHDC, textHandler->getFont());
+            SetTextColor(tempHDC, textRGB);
+            SetBkColor(tempHDC, bkRGB);
             
-            DrawText(hdc, text.c_str(), text.size(), &rect, DT_LEFT);
+            // DrawText(hdc, text.c_str(), text.size(), &rect, DT_LEFT);
+            int x = 0, y = 0;
+            for (auto character: textHandler->getBuffer()) {
+                TextOut(tempHDC, x, y, &character, 1);
+                if (character == L'\n' || character == L'\r') {
+                    x = 0;
+                    y += CHAR_HEIGHT - 1;
+                } else {
+                    x += CHAR_WIDTH;
+                }
+            }
 
             // Draw cursor
             if (textHandler->getDisplayCursor())
-                FillRect(hdc, &cursorRect, CreateSolidBrush(textColor));
+                FillRect(tempHDC, &cursorRect, CreateSolidBrush(textRGB));
+
+            // Now to copy what got drawn onto the final canvas
+            BitBlt(hdc, 0, 0, rect.right, rect.bottom, tempHDC, 0, 0, SRCCOPY);
+
+            // Cleanup
+            DeleteObject(tempBuffer);
+            DeleteDC(tempHDC);
+            
             EndPaint(hwnd, &ps);
             
+            return 0;
+        }
+        case WM_KEYDOWN: {
+            // Maintain cursor displaying while scrolling
+            textHandler->setTypingStatus(true);
+            switch (wParam) {
+                case VK_LEFT:
+                    textHandler->moveCursorLeft();
+                    textHandler->getBuffer().moveCursorLeft();
+                    break;
+                case VK_RIGHT:
+                    textHandler->moveCursorRight();
+                    textHandler->getBuffer().moveCursorRight();
+                    break;
+            }
+            RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
             return 0;
         }
         case WM_CHAR: {
@@ -42,10 +83,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             textHandler->detCursorBehav(wParam);
             // Handle backspace pressing (but only when there are characters on the screen)
             if (wParam == L'\b') {
-                if (text.size() > 0)
-                    text.pop_back();    
+                textHandler->getBuffer().remove();
             } else {
-                text += wParam;
+                textHandler->getBuffer().insert(wParam);
             }
             RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
             return 0;

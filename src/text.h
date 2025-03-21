@@ -3,6 +3,7 @@
 #include <string.h>
 #include <vector>
 #include <chrono>
+#include "gapbuffer.h"
 #include "utils.h"
 
 constexpr size_t CHAR_WIDTH = 8;
@@ -27,7 +28,9 @@ class Text {
             cursor.bottom = cursor.top + CHAR_HEIGHT;
             return &cursor;
         }
-        size_t getSize() const {return text.size();}
+        GapBuffer& getBuffer() {return buffer;}
+
+        size_t getSize() const {return buffer.getSize();}
         HFONT getFont() const {return font;}
 
         void changeCursorDisplay() {displayCursor = !displayCursor;}
@@ -37,7 +40,7 @@ class Text {
         bool isTyping() const {return typing;}
 
     private:
-        std::vector<std::wstring> text;
+        GapBuffer buffer;
         RECT cursor;
         HFONT font = (HFONT)(GetStockObject(SYSTEM_FIXED_FONT));
 

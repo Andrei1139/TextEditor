@@ -4,7 +4,8 @@
 #define UNICODE
 #endif
 
-#include <windows.h>
+#include "utils.h"
+#include "text.h"
 
 class Window {
     public:
@@ -13,11 +14,10 @@ class Window {
         Window& operator=(const Window&) = delete;
 
         void loop();
-
+        Text& getText() {return text;}
     private:
         LPCTSTR window_name;
         HWND window_handle;
         LRESULT CALLBACK (*procedure)(HWND, UINT, WPARAM, LPARAM);
-
-        std::string text{};
+        Text text;
 };

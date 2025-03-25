@@ -2,6 +2,7 @@
 #include <string>
 #include <string.h>
 #include <vector>
+#include <list>
 #include <chrono>
 #include "gapbuffer.h"
 #include "utils.h"
@@ -18,7 +19,7 @@ class Text {
         void moveCursorLeft(size_t steps = 1);
         void moveCursorRight(size_t steps = 1);
 
-        void detCursorBehav(WPARAM param);
+        void handleInput(WPARAM param);
 
         size_t getCursorX() const {return cursor.left;}
         size_t getCursorY() const {return cursor.top;}
@@ -28,22 +29,31 @@ class Text {
             cursor.bottom = cursor.top + CHAR_HEIGHT;
             return &cursor;
         }
-        GapBuffer& getBuffer() {return buffer;}
+        GapBuffer<GapBuffer<wchar_t>>& getBuffer() {return buffer;}
 
-        size_t getSize() const {return buffer.getSize();}
+        // size_t getSize() const {return buffer.getSize();}
         HFONT getFont() const {return font;}
+
+        void insert(wchar_t character);
 
         void changeCursorDisplay() {displayCursor = !displayCursor;}
         void changeCursorDisplay(bool status) {displayCursor = status;}
         void setTypingStatus(bool status) {typing = status;}
         bool getDisplayCursor() const {return displayCursor || typing;}
         bool isTyping() const {return typing;}
+        void setCtrlPressed(bool pressed) {ctrlPressed = true;}
+        bool isCtrlPressed() const {return ctrlPressed;}
 
     private:
-        GapBuffer buffer;
+        GapBuffer<GapBuffer<wchar_t>> buffer;
         RECT cursor;
+        int maxX = 0;
         HFONT font = (HFONT)(GetStockObject(SYSTEM_FIXED_FONT));
 
         bool displayCursor = true;
         bool typing = false;
+        bool ctrlPressed = false;
+
+        void handleNewLine();
+        void handleBackspace();
 };

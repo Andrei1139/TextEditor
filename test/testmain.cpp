@@ -2,7 +2,7 @@
 #include "../src/gapbuffer.h"
 
 int main() {
-    GapBuffer buffer;
+    GapBuffer<wchar_t> buffer;
     buffer.insert(L'T');
     buffer.insert(L'e');
     buffer.insert(L's');
@@ -12,7 +12,8 @@ int main() {
     buffer.moveCursorLeft();
     buffer.moveCursorRight();
     
-    for (auto elem: buffer) {
-        std::wcout << elem << L'\n';
-    }
+    std::wcout << buffer.getChar();
+    // for (auto elem: buffer) {
+    //     std::wcout << elem << L'\n';
+    // }
 }

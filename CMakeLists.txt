@@ -9,4 +9,6 @@ add_definitions(-DUNICODE -D_UNICODE)
 
 file(GLOB SRCS src/*.cpp)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 add_executable(TextEditor ${SRCS})

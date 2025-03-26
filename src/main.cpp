@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::ifstream input_file(argv[1]);
+    std::wifstream input_file(argv[1]);
 
     if (!input_file.is_open()) {
         std::cerr << "File could not be opened\n";
@@ -21,8 +21,16 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        Window window(L"Nameee");
+        Window window(L"Name", &input_file);
         window.loop();
+        std::wofstream output(argv[1]);
+
+        if (!output.is_open()) {
+            std::cerr << "Output cold not be written\n";
+            return -1;
+        }
+
+        TextParser::writeText(window.getText(), output);
     } catch (const std::exception& exception) {
         std::cerr << "Exception: " << exception.what();
     }

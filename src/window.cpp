@@ -216,9 +216,10 @@ void register_class(WNDPROC procedure, LPCWSTR class_name) {
     RegisterClass(&wndclass);
 }
 
-Window::Window(LPCTSTR window_name_arg)
+Window::Window(LPCTSTR window_name_arg, std::wistream* input_file)
 : window_name{window_name_arg},
-  procedure{WindowProc} {
+  procedure{WindowProc},
+  text{TextParser::readText(*input_file)} {
     register_class(procedure, L"Window Class");
 
     window_handle = CreateWindowEx(

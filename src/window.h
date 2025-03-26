@@ -6,10 +6,11 @@
 
 #include "utils.h"
 #include "text.h"
+#include "textparser.h"
 
 class Window {
     public:
-        Window(LPCTSTR window_name = L"Default name");
+        Window(LPCTSTR window_name = L"Default name", std::wistream* input_file = nullptr);
         Window(const Window&) = delete;
         Window& operator=(const Window&) = delete;
 

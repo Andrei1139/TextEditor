@@ -44,6 +44,8 @@ class Text {
         void setCtrlPressed(bool pressed) {ctrlPressed = true;}
         bool isCtrlPressed() const {return ctrlPressed;}
 
+        void handleClick(LPARAM param);
+
     private:
         GapBuffer<GapBuffer<wchar_t>> buffer;
         RECT cursor;

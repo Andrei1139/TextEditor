@@ -15,6 +15,7 @@ class Window {
 
         void loop();
         Text& getText() {return text;}
+        int horizontalShift = 0, verticalShift = 0;
     private:
         LPCTSTR window_name;
         HWND window_handle;

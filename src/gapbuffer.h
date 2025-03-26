@@ -92,20 +92,24 @@ class GapBuffer {
             return true;
         }
         bool setCursorPos(int newGapStart) {
-            if (newGapStart > capacity - (gapEnd - gapStart)) {
+            int gapSize = gapEnd - gapStart;
+            
+            // Cannot put cursor farther than its size allows
+            if (newGapStart > capacity - gapSize) {
                 return false;
             }
 
             if (newGapStart == gapStart)
                 return true;
 
+            // If cursor is moved forward
             if (newGapStart > gapStart) {
                 for (int i = gapStart; i < newGapStart; ++i) {
-                    elements[i] = elements[i + gapEnd - gapStart];
+                    elements[i] = elements[i + gapSize];
                 }
             } else {
-                for (int i = gapEnd - (gapStart - newGapStart); i < gapEnd; ++i) {
-                    elements[i] = elements[i - (gapEnd - gapStart)];
+                for (int i = gapEnd - 1; i > gapEnd - (gapStart - newGapStart) - 1; --i) {
+                    elements[i] = elements[i - gapSize];
                 }
             }
 

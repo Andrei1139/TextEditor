@@ -10,7 +10,17 @@ static constexpr COLORREF bkRGB = RGB(bkColor, bkColor, bkColor);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     // For class access, since the function doesnt allow additionals args
-    Text *textHandler = reinterpret_cast<Text *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+    Window *windowInstance = reinterpret_cast<Window *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+            // info.cbSize = sizeof(SCROLLINFO);
+            // info.fMask = SIF_RANGE;
+            // info.nMin = 0;
+            // info.nMax = 100;
+            // info.nPage = 5;
+            // info.nPos = 0;
+            
+            // GetScrollInfo(hwnd, SB_HORZ, &info);
+
+            // std::cout << info.nMin << ' ' << info.nMax << ' ' << info.nPage << ' ' << info.nPos << '\n';
 
     switch (uMsg) {
         case WM_DESTROY:
@@ -19,7 +29,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            tagRECT rect, cursorRect = *(textHandler->getCursor());
+            tagRECT rect, cursorRect = *(windowInstance->getText().getCursor());
             GetClientRect(hwnd, &rect);
 
             // Creating a temporary bitmap and device context for buffering what gets drawn
@@ -30,25 +40,31 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // Clear the window (by repainting it white)
             FillRect(tempHDC, &ps.rcPaint, CreateSolidBrush(bkRGB));
 
-            SelectObject(tempHDC, textHandler->getFont());
+            SelectObject(tempHDC, windowInstance->getText().getFont());
             SetTextColor(tempHDC, textRGB);
             SetBkColor(tempHDC, bkRGB);
             
             // DrawText(hdc, text.c_str(), text.size(), &rect, DT_LEFT);
-            int x = 0, y = 0;
-            for (auto& line: textHandler->getBuffer()) {
+            int x = -windowInstance->horizontalShift * CHAR_WIDTH;
+            int y = -windowInstance->verticalShift * CHAR_HEIGHT;
+            for (auto& line: windowInstance->getText().getBuffer()) {
                 for (auto character: line) {
                     TextOut(tempHDC, x, y, &character, 1);
                     x += CHAR_WIDTH;
                 }
                 TextOut(tempHDC, x, y, L"\r", 1);
-                x = 0;
+                x = -windowInstance->horizontalShift * CHAR_WIDTH;
                 y += CHAR_HEIGHT - 1;
             }
 
             // Draw cursor
-            if (textHandler->getDisplayCursor())
-                FillRect(tempHDC, &cursorRect, CreateSolidBrush(textRGB));
+            auto tempCursorRect = cursorRect;
+            tempCursorRect.left -= windowInstance->horizontalShift * CHAR_WIDTH;
+            tempCursorRect.right = tempCursorRect.left + 1;
+            tempCursorRect.top -= windowInstance->verticalShift *CHAR_HEIGHT;
+            tempCursorRect.bottom = tempCursorRect.top + 16;
+            if (windowInstance->getText().getDisplayCursor())
+                FillRect(tempHDC, &tempCursorRect, CreateSolidBrush(textRGB));
 
             // Now to copy what got drawn onto the final canvas
             BitBlt(hdc, 0, 0, rect.right, rect.bottom, tempHDC, 0, 0, SRCCOPY);
@@ -62,53 +78,134 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case WM_KEYDOWN: {
             // Maintain cursor displaying while scrolling
-            textHandler->setTypingStatus(true);
+            windowInstance->getText().setTypingStatus(true);
             switch (wParam) {
                 case VK_LEFT:
-                    if (textHandler->isCtrlPressed()) {
-                        std::cout << "yay\n";
-                    }
-                    textHandler->moveCursorLeft();
+                    windowInstance->getText().moveCursorLeft();
                     break;
                 case VK_RIGHT:
-                    textHandler->moveCursorRight();
+                    windowInstance->getText().moveCursorRight();
                     break;
                 case VK_UP:
-                    textHandler->moveCursorUp();
+                    windowInstance->getText().moveCursorUp();
                     break;
                 case VK_DOWN:
-                    textHandler->moveCursorDown();
+                    windowInstance->getText().moveCursorDown();
                     break;
                 case VK_CONTROL:
                     // std::cout << GetAsyncKeyState(VK_DOWN) << '\n';
-                    textHandler->setCtrlPressed(true);
+                    windowInstance->getText().setCtrlPressed(true);
                     break;
-            }
+                }
             RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
             return 0;
         }
         case WM_KEYUP: {
             switch (wParam) {
                 case VK_CONTROL:
-                    textHandler->setCtrlPressed(false);
+                    windowInstance->getText().setCtrlPressed(false);
                     break;
             }
+            return 0;
+        }
+        case WM_LBUTTONDOWN: {
+            windowInstance->getText().handleClick(lParam);
+
+            SCROLLINFO info;
+
+            GetScrollInfo(hwnd, SB_HORZ, &info);
+
+            std::cout << info.nMin << ' ' << info.nMax << ' ' << info.nPage << ' ' << info.nPos << '\n';
+            return 0;
         }
         case WM_CHAR: {
             // Handle cursor behavior separately
-            textHandler->setTypingStatus(true);
-            textHandler->handleInput(wParam);
+            windowInstance->getText().setTypingStatus(true);
+            windowInstance->getText().handleInput(wParam);
 
             RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
             return 0;
         }
-        // case WM_LBUTTONDOWN: {
-        //     for (auto& line: textHandler->getBuffer()) {
-        //         std::wcout << line << '\n';
-        //     }
-            
-        //     return 0;
-        // }
+        case WM_HSCROLL: {
+            SCROLLINFO info;
+            info.cbSize = sizeof(SCROLLINFO);
+            info.fMask = SIF_ALL;
+            GetScrollInfo(hwnd, SB_HORZ, &info);
+
+            switch(LOWORD(wParam)) {
+                case SB_THUMBPOSITION: case SB_THUMBTRACK:
+                    info.nPos = HIWORD(wParam);
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
+                    break;
+
+                case SB_LINELEFT:
+                    info.nPos = (info.nPos == 0) ? 0 : --info.nPos;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
+                    break;
+
+                case SB_LINERIGHT:
+                    info.nPos = (info.nPos == info.nMax) ? info.nMax : ++info.nPos;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
+                    break;    
+
+                case SB_PAGELEFT:
+                    info.nPos = (info.nPos - info.nPage <= 0) ? 0 : info.nPos - info.nPage;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
+                    break;
+                    
+                case SB_PAGERIGHT:
+                    info.nPos = (info.nPos + info.nPage >= info.nMax) ? info.nMax - info.nPage : info.nPos + info.nPage;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
+                    break;
+            }
+        }
+        case WM_VSCROLL: {
+            SCROLLINFO info;
+            info.cbSize = sizeof(SCROLLINFO);
+            info.fMask = SIF_ALL;
+            GetScrollInfo(hwnd, SB_VERT, &info);
+
+            switch(LOWORD(wParam)) {
+                case SB_THUMBPOSITION: case SB_THUMBTRACK:
+                    info.nPos = HIWORD(wParam);
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_VERT, &info, TRUE);
+                    break;
+
+                case SB_LINEUP:
+                    info.nPos = (info.nPos == 0) ? 0 : --info.nPos;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_VERT, &info, TRUE);
+                    break;
+
+                case SB_LINEDOWN:
+                    info.nPos = (info.nPos == info.nMax) ? info.nMax : ++info.nPos;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_VERT, &info, TRUE);
+                    break;    
+
+                case SB_PAGEUP:
+                    info.nPos = (info.nPos - info.nPage <= 0) ? 0 : info.nPos - info.nPage;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_VERT, &info, TRUE);
+                    break;
+                    
+                case SB_PAGEDOWN:
+                    info.nPos = (info.nPos + info.nPage >= info.nMax) ? info.nMax - info.nPage : info.nPos + info.nPage;
+                    info.fMask = SIF_POS;
+                    SetScrollInfo(hwnd, SB_VERT, &info, TRUE);
+                    break;
+            }
+
+            windowInstance->verticalShift = info.nPos;
+            RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+            return 0;
+        }
     }
     // Rest of messages get handled by the default procedure
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -134,7 +231,7 @@ Window::Window(LPCTSTR window_name_arg)
         0,
         L"Window Class",
         L"Tests",
-        WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         NULL, NULL, GetModuleHandle(nullptr), NULL
       );
@@ -143,8 +240,18 @@ Window::Window(LPCTSTR window_name_arg)
         throw std::runtime_error{"Could dont create window"};
     }
 
+    // Setting up the scroll bars
+    SCROLLINFO info;
+    info.cbSize = sizeof(SCROLLBARINFO);
+    info.fMask = SIF_PAGE | SIF_RANGE;
+    info.nMin = 0;
+    info.nMax = 100;
+    info.nPage = 20;
+    SetScrollInfo(window_handle, SB_HORZ, &info, TRUE);
+    SetScrollInfo(window_handle, SB_VERT, &info, TRUE);
+
     // For class access outside the class
-    SetWindowLongPtr(window_handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&text)); 
+    SetWindowLongPtr(window_handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this)); 
 
     ShowWindow(window_handle, SW_SHOW);
 }

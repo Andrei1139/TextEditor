@@ -117,7 +117,7 @@ void Text::handleInput(WPARAM param) {
 void Text::insert(wchar_t character) {
     cursor.left += CHAR_WIDTH;
     buffer.getElem()->insert(character);
-    maxX = buffer.getElem()->getGapStart() - 1;
+    maxX = buffer.getElem()->getGapStart();
 }
 
 void Text::handleNewLine() {
@@ -154,8 +154,15 @@ void Text::handleBackspace() {
         GapBuffer<wchar_t> *line = buffer.getElem();
         cursor.left = line->getSize() * CHAR_WIDTH;
         cursor.top -= CHAR_HEIGHT - 1;
-
+ 
         while (line->moveCursorRight()) {}
     }
     --maxX;
+}
+
+void Text::handleClick(LPARAM param) {
+    auto auxPointStruct = MAKEPOINTS(param);
+    auto x = auxPointStruct.x, y = auxPointStruct.y;
+
+    
 }

@@ -108,16 +108,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             }
             return 0;
         }
-        case WM_LBUTTONDOWN: {
-            windowInstance->getText().handleClick(lParam);
-
-            SCROLLINFO info;
-
-            GetScrollInfo(hwnd, SB_HORZ, &info);
-
-            std::cout << info.nMin << ' ' << info.nMax << ' ' << info.nPage << ' ' << info.nPos << '\n';
-            return 0;
-        }
         case WM_CHAR: {
             // Handle cursor behavior separately
             windowInstance->getText().setTypingStatus(true);
@@ -163,6 +153,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     SetScrollInfo(hwnd, SB_HORZ, &info, TRUE);
                     break;
             }
+
+            windowInstance->horizontalShift = info.nPos;
+            RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+            return 0;
         }
         case WM_VSCROLL: {
             SCROLLINFO info;

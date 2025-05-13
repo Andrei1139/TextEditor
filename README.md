@@ -1,6 +1,6 @@
 # WIN32 Text Editor
 
-Basic Text Editor written in c++ using the Win32 API.
+Basic Text Editor written in C++ using the Win32 API.
 
 ## Usage
 
@@ -8,7 +8,7 @@ Basic Text Editor written in c++ using the Win32 API.
 2. Run the following commands in the terminal (CMake required):
 - cmake .. -G "MinGW Makefiles"
 - cmake --build .
-3. Run the TextEditor exeecutable.
+3. Run the TextEditor executable.
 
 ## License
 
